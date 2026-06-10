@@ -6,7 +6,7 @@
 """
 import urllib.request, json, sys
 
-BASE_URL = "http://localhost:5000"   # Render pe deploy ke baad yahan URL change karo
+BASE_URL = "https://secure-pdf-viewer.onrender.com"   # Render pe deploy ke baad yahan URL change karo
                                      # jaise: "https://secure-pdf-viewer.onrender.com"
 
 def upload_pdf(pdf_path):
