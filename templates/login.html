@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Document Access</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  }
+  .icon { font-size: 40px; margin-bottom: 1rem; }
+  h1 { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 6px; }
+  .sub { font-size: 14px; color: #666; margin-bottom: 2rem; }
+  label { display: block; font-size: 13px; font-weight: 500; color: #333; margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 1rem;
+  }
+  input:focus { border-color: #4a4af0; }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    margin-top: 4px;
+  }
+  button:hover { opacity: 0.88; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error {
+    background: #fff0f0;
+    color: #c0392b;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 1rem;
+    display: none;
+  }
+  .note {
+    font-size: 12px;
+    color: #999;
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🔒</div>
+  <h1>Document Access</h1>
+  <p class="sub">Enter your credentials to view the document</p>
+
+  <label for="email">Email address</label>
+  <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+
+  <label for="password">Password</label>
+  <input type="password" id="password" placeholder="Your unique password" autocomplete="current-password">
+
+  <button id="loginBtn" onclick="doLogin()">Access document</button>
+  <div class="error" id="errorMsg"></div>
+
+  <p class="note">Password is unique to you — do not share it</p>
+</div>
+
+<script>
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const btn      = document.getElementById('loginBtn');
+    const err      = document.getElementById('errorMsg');
+
+    if (!email || !password) {
+      showError('Please enter both email and password.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    err.style.display = 'none';
+
+    try {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        window.location.href = '/viewer';
+      } else {
+        showError(data.error || 'Login failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Access document';
+      }
+    } catch {
+      showError('Network error. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Access document';
+    }
+  }
+
+  function showError(msg) {
+    const err = document.getElementById('errorMsg');
+    err.textContent = msg;
+    err.style.display = 'block';
+  }
+</script>
+</body>
+</html>

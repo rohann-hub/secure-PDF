@@ -1,0 +1,5 @@
+flask
+pdf2image
+pillow
+pypdf
+cloudinary

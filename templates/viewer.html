@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Secure Document Viewer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #fff;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #12122a;
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .title { flex: 1; font-size: 15px; font-weight: 500; opacity: 0.85; }
+  .page-info { font-size: 13px; opacity: 0.55; white-space: nowrap; }
+  .nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white; border-radius: 8px;
+    padding: 7px 14px; font-size: 13px;
+    cursor: pointer; transition: background 0.15s; white-space: nowrap;
+  }
+  .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .logout { font-size: 13px; opacity: 0.5; cursor: pointer; text-decoration: underline; white-space: nowrap; }
+  .logout:hover { opacity: 0.8; }
+  .pages {
+    display: flex; flex-direction: column;
+    align-items: center; padding: 24px 16px; gap: 20px;
+    min-height: calc(100vh - 60px);
+  }
+  .page-wrap {
+    position: relative; border-radius: 6px;
+    overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    max-width: 860px; width: 100%;
+  }
+  .page-wrap img {
+    display: block; width: 100%; height: auto;
+    pointer-events: none; -webkit-user-drag: none;
+  }
+  .page-wrap::after {
+    content: ''; position: absolute; inset: 0; z-index: 2; background: transparent;
+  }
+  .watermark {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; transform: rotate(-35deg);
+    font-size: 28px; font-weight: 700;
+    color: rgba(255,255,255,0.055);
+    letter-spacing: 6px; text-transform: uppercase; white-space: nowrap;
+  }
+  .skeleton {
+    width: 100%; max-width: 860px; aspect-ratio: 210/297;
+    background: #2a2a4a; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; opacity: 0.6;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:0.4} }
+  .loading { animation: pulse 1.2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="title">Confidential Document</span>
+  <span class="page-info" id="pageInfo">Loading...</span>
+  <button class="nav-btn" id="prevBtn" onclick="changePage(-1)" disabled>← Prev</button>
+  <button class="nav-btn" id="nextBtn" onclick="changePage(1)"  disabled>Next →</button>
+  <span class="logout" onclick="window.location='/logout'">Sign out</span>
+</div>
+
+<div class="pages" id="pageContainer">
+  <div class="skeleton loading">Loading document...</div>
+</div>
+
+<script>
+  const TOKEN       = "{{ token }}";
+  const USER        = "{{ user_name }}";
+  let totalPages    = {{ total_pages }};
+  let currentPage   = 1;
+
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    const blocked = (e.ctrlKey || e.metaKey) &&
+      ['s','p','c','a','u'].includes(e.key.toLowerCase());
+    if (blocked || e.key === 'PrintScreen') {
+      e.preventDefault(); e.stopPropagation();
+    }
+  });
+  document.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('touchstart', e => {
+    if (e.target.tagName === 'IMG') e.preventDefault();
+  }, { passive: false });
+
+  async function init() {
+    if (totalPages > 0) {
+      loadPage(1);
+    } else {
+      try {
+        const res  = await fetch(`/page_count?t=${TOKEN}`);
+        const data = await res.json();
+        totalPages = data.pages;
+        if (totalPages > 0) loadPage(1);
+        else showError('Document not available.');
+      } catch {
+        showError('Failed to load document.');
+      }
+    }
+  }
+
+  function loadPage(num) {
+    currentPage = num;
+    const container = document.getElementById('pageContainer');
+    container.innerHTML = `<div class="skeleton loading">Loading page ${num} of ${totalPages}...</div>`;
+
+    const img     = new Image();
+    img.src       = `/page/${num}?t=${TOKEN}&_=${Date.now()}`;
+    img.draggable = false;
+
+    img.onload = () => {
+      const wrap = document.createElement('div');
+      wrap.className = 'page-wrap';
+      const wm = document.createElement('div');
+      wm.className  = 'watermark';
+      wm.textContent = USER;
+      wrap.appendChild(img);
+      wrap.appendChild(wm);
+      container.innerHTML = '';
+      container.appendChild(wrap);
+      updateControls();
+    };
+    img.onerror = () => showError(`Could not load page ${num}.`);
+  }
+
+  function changePage(dir) {
+    const next = currentPage + dir;
+    if (next >= 1 && next <= totalPages) loadPage(next);
+  }
+
+  function updateControls() {
+    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('prevBtn').disabled = currentPage <= 1;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+  }
+
+  function showError(msg) {
+    document.getElementById('pageContainer').innerHTML =
+      `<div class="skeleton" style="color:#ff6b6b;opacity:1;">${msg}</div>`;
+  }
+
+  init();
+</script>
+</body>
+</html>

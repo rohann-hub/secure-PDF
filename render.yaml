@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: secure-pdf-viewer
+    env: python
+    buildCommand: apt-get install -y poppler-utils && pip install -r requirements.txt
+    startCommand: python app.py
