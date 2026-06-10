@@ -27,15 +27,15 @@ from pdf2image import convert_from_bytes
 from PIL import Image
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("test123", secrets.token_hex(32))
+app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
 # ─────────────────────────────────────────────
 # CLOUDINARY CONFIG — Environment variables se aata hai
 # ─────────────────────────────────────────────
 cloudinary.config(
-    cloud_name = os.environ.get("dfpilv1om"),
-    api_key    = os.environ.get("322893952695546"),
-    api_secret = os.environ.get("CXgo0IFbyzmCuGXRQtPISwB-fnA"),
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key    = os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET"),
     secure     = True
 )
 
